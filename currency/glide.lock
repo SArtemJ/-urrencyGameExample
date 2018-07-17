@@ -1,0 +1,80 @@
+hash: 38a0b5fccb5b556c3133f4dfde3e037fb57acec60e9c9b86a7dbe3243a21b5fc
+updated: 2018-07-16T16:02:03.468078+03:00
+imports:
+- name: github.com/fsnotify/fsnotify
+  version: c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9
+- name: github.com/go-redis/redis
+  version: ab1a52f0c9e9ebd920caba4492af5af4242705e0
+- name: github.com/gorilla/context
+  version: 08b5f424b9271eedf6f9f0ce86cb9396ed337a42
+- name: github.com/gorilla/mux
+  version: cb4698366aa625048f3b815af6a0dea8aef9280a
+- name: github.com/hashicorp/hcl
+  version: ef8a98b0bbce4a65b5aa4c368430a80ddc533168
+  subpackages:
+  - hcl/ast
+  - hcl/parser
+  - hcl/printer
+  - hcl/scanner
+  - hcl/strconv
+  - hcl/token
+  - json/parser
+  - json/scanner
+  - json/token
+- name: github.com/inconshreveable/mousetrap
+  version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
+- name: github.com/magiconair/properties
+  version: c2353362d570a7bfa228149c62842019201cfb71
+- name: github.com/mitchellh/mapstructure
+  version: bb74f1db0675b241733089d5a1faa5dd8b0ef57b
+- name: github.com/nicovogelaar/go-bitcoinaverage
+  version: c69fb380ef5a966a2f786f16ce6ff2048e3a54c2
+  subpackages:
+  - bitcoinaverage
+- name: github.com/pelletier/go-toml
+  version: 603baefff989777996bf283da430d693e78eba3a
+- name: github.com/spf13/afero
+  version: 787d034dfe70e44075ccc060d346146ef53270ad
+  subpackages:
+  - mem
+- name: github.com/spf13/cast
+  version: 8965335b8c7107321228e3e3702cab9832751bac
+- name: github.com/spf13/cobra
+  version: a114f312e075f65bf30d6d9a1430113f857e543b
+- name: github.com/spf13/jwalterweatherman
+  version: 7c0cea34c8ece3fbeb2b27ab9b59511d360fb394
+- name: github.com/spf13/pflag
+  version: 3ebe029320b2676d667ae88da602a5f854788a8a
+- name: github.com/spf13/viper
+  version: 15738813a09db5c8e5b60a19d67d3f9bd38da3a4
+- name: go.uber.org/atomic
+  version: 1ea20fb1cbb1cc08cbd0d913a96dead89aa18289
+  subpackages:
+  - zapcore
+- name: go.uber.org/multierr
+  version: 3c4937480c32f4c13a875a1829af76c98ca3d40a
+- name: go.uber.org/zap
+  version: 7e7e266a8dbce911a49554b945538c5b950196b8
+  subpackages:
+  - buffer
+  - internal/bufferpool
+  - internal/color
+  - internal/exit
+  - zapcore
+- name: golang.org/x/sys
+  version: ce36f3865eeb42541ce3f87f32f8462c5687befa
+  subpackages:
+  - unix
+- name: golang.org/x/text
+  version: c0fe8dde8a10c9b32154bd9bdf080b8b3d635127
+  subpackages:
+  - transform
+  - unicode/norm
+- name: gopkg.in/yaml.v2
+  version: 5420a8b6744d3b0345ab293f6fcba19c978f1183
+testImports:
+- name: github.com/stretchr/testify
+  version: f35b8ab0b5a2cef36673838d662e249dd9c94686
+  subpackages:
+  - assert
+  - require
