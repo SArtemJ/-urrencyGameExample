@@ -44,10 +44,10 @@ func NewServer(cfg CurrencyServerConfig) *CurrencyServer {
 		cfg.ticker = 5
 	}
 	if cfg.publicKey == "" {
-		cfg.publicKey = "ODkzOGI3NTk3ODk1NGVmMDgzMDRiMWZkYTJiZDQzOTg"
+		cfg.publicKey = ""
 	}
 	if cfg.secretKey == "" {
-		cfg.secretKey = "NTNlNDc2M2Y2ODJhNDViYmFlMjM5NGJmNDk2MTAxZDQwZGUyZWYxZTFmOTA0MTRjYWJkMGRmNTdiNTAzN2I4MQ"
+		cfg.secretKey = ""
 	}
 
 	server := &CurrencyServer{
