@@ -1,6 +1,8 @@
 package libcurrency
 
 import (
+	"encoding/json"
+	"io"
 	"net/http"
 	"strconv"
 	"time"
@@ -16,15 +18,17 @@ type CurrencyServer struct {
 	PublicKey string
 	SecretKey string
 
-	Timer   *time.Timer
+	Ticker  *time.Ticker
 	Router  *mux.Router
 	RClient *redis.Client
+
+	Currency map[string]float64
 }
 
 type CurrencyServerConfig struct {
 	address   string
 	apiPrefix string
-	timer     int64
+	ticker    int64
 	publicKey string
 	secretKey string
 }
@@ -36,14 +40,14 @@ func NewServer(cfg CurrencyServerConfig) *CurrencyServer {
 	if cfg.apiPrefix == "" {
 		cfg.apiPrefix = "/api/"
 	}
-	if cfg.timer == 0 {
-		cfg.timer = 5
+	if cfg.ticker == 0 {
+		cfg.ticker = 5
 	}
 	if cfg.publicKey == "" {
-		cfg.publicKey = ""
+		cfg.publicKey = "ODkzOGI3NTk3ODk1NGVmMDgzMDRiMWZkYTJiZDQzOTg"
 	}
 	if cfg.secretKey == "" {
-		cfg.secretKey = ""
+		cfg.secretKey = "NTNlNDc2M2Y2ODJhNDViYmFlMjM5NGJmNDk2MTAxZDQwZGUyZWYxZTFmOTA0MTRjYWJkMGRmNTdiNTAzN2I4MQ"
 	}
 
 	server := &CurrencyServer{
@@ -51,26 +55,38 @@ func NewServer(cfg CurrencyServerConfig) *CurrencyServer {
 		APIPrefix: cfg.apiPrefix,
 		PublicKey: cfg.publicKey,
 		SecretKey: cfg.secretKey,
-		Timer:     time.NewTimer(time.Duration(cfg.timer)),
+		Ticker:    time.NewTicker(time.Minute * time.Duration(cfg.ticker)),
 		Router:    mux.NewRouter(),
+		Currency:  map[string]float64{"BTCUSD": 0.00, "BTCEUR": 0.00, "BTCGBP": 0.00, "BTCRUB": 0.00},
 	}
 
 	server.SetupRouter()
 	return server
 }
 
+func (server *CurrencyServer) GetRouter() *mux.Router {
+	return server.Router
+}
+
 func (server *CurrencyServer) SetupRouter() {
 	server.Router = server.Router.PathPrefix(server.APIPrefix).Subrouter()
-	//Logger
+	Logger.Debugf(`API endpoint "%s"`, server.APIPrefix)
 
-	server.Router.HandleFunc("/update/{type}", server.UpdateCurrency).Methods("PATCH")
-	server.Router.HandleFunc("/currency/{type}", server.GetCurrency).Methods("GET")
+	server.Router.HandleFunc("/update/{type}", server.UpdateOneCurrency).Methods("PATCH")
+	server.Router.HandleFunc("/currency/{type}", server.GetOneCurrency).Methods("GET")
+	server.Router.HandleFunc("/currencyall", server.GetAllCurrency).Methods("GET")
 	server.Router.HandleFunc("/updateall", server.UpdateAllCurrency).Methods("GET")
 }
 
 func (server *CurrencyServer) Run() {
 	server.RedisConnection()
-	Logger.Infof(`Stream server started on "%s"`, server.Address)
+	go func() {
+		for t := range server.Ticker.C {
+			server.DoUpdateImmediately()
+			Logger.Debugf(`Last update all currency "%s"`, t)
+		}
+	}()
+	Logger.Debugf(`Stream server started on "%s"`, server.Address)
 
 	// server.Router.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
 	// 	t, err := route.GetPathTemplate()
@@ -83,31 +99,82 @@ func (server *CurrencyServer) Run() {
 	http.ListenAndServe(server.Address, server.Router)
 }
 
-func (server *CurrencyServer) UpdateCurrency(w http.ResponseWriter, r *http.Request) {
-
+func (server *CurrencyServer) UpdateOneCurrency(w http.ResponseWriter, r *http.Request) {
+	typeC := mux.Vars(r)["type"]
+	if _, ok := server.Currency[typeC]; ok {
+		if done := server.CurrencyUpdate(typeC); done == true {
+			w.WriteHeader(http.StatusOK)
+			resStr := "Value currency was updated " + typeC +
+				" = " + strconv.FormatFloat(server.GetRValue(typeC), 'f', -1, 64)
+			io.WriteString(w, resStr)
+		}
+	} else {
+		w.WriteHeader(http.StatusBadRequest)
+		io.WriteString(w, "Not exist type of currency or server bitcoinaverage - return error")
+		Logger.Debugw("Not exist type of currency for update - or server bitcoinaverage - return error", "err ", typeC)
+	}
 }
 
-func (server *CurrencyServer) GetCurrency(w http.ResponseWriter, r *http.Request) {
-
+func (server *CurrencyServer) GetOneCurrency(w http.ResponseWriter, r *http.Request) {
+	var resultC float64
+	typeC := mux.Vars(r)["type"]
+	if _, ok := server.Currency[typeC]; ok {
+		resultC = server.GetRValue(typeC)
+		json.NewEncoder(w).Encode(resultC)
+		w.WriteHeader(http.StatusOK)
+	} else {
+		w.WriteHeader(http.StatusBadRequest)
+		io.WriteString(w, "Bad request incorrect type currency")
+		Logger.Debugw("Not exist type of currency for get method", "err ", typeC)
+		return
+	}
 }
 
 func (server *CurrencyServer) UpdateAllCurrency(w http.ResponseWriter, r *http.Request) {
-	bitcoinClient := bitcoinaverage.NewClient(server.PublicKey, server.SecretKey)
-	priceDataService := bitcoinaverage.NewPriceDataService(bitcoinClient)
+	server.DoUpdateImmediately()
+	// btcClient := bitcoinaverage.NewClient(server.PublicKey, server.SecretKey)
+	// btcDataService := bitcoinaverage.NewbtcDataService(btcClient)
 
-	priceData, err := priceDataService.GetTickerDataBySymbol(bitcoinaverage.SymbolSetGlobal, "BTCUSD")
+	// for _, v := range server.Currency {
+	// 	btcData, err := btcDataService.GetTickerDataBySymbol(bitcoinaverage.SymbolSetGlobal, v)
+	// 	if err != nil {
+	// 		Logger.Debugw("No currency data to save or bad request to bitcoinaverage")
+	// 	} else {
+	// 		server.SetRValue(v, strconv.FormatFloat(btcData.Ask, 'f', -1, 64))
+	// 	}
+	// }
+}
+
+func (server *CurrencyServer) GetAllCurrency(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	allCurrency := map[string]float64{}
+	for i, _ := range server.Currency {
+		allCurrency[i] = server.GetRValue(i)
+	}
+	json.NewEncoder(w).Encode(allCurrency)
+	w.WriteHeader(http.StatusOK)
+}
+
+func (server *CurrencyServer) DoUpdateImmediately() {
+	for i, _ := range server.Currency {
+		server.CurrencyUpdate(i)
+	}
+}
+
+func (server *CurrencyServer) CurrencyUpdate(v string) bool {
+	btcClient := bitcoinaverage.NewClient(server.PublicKey, server.SecretKey)
+	btcDataService := bitcoinaverage.NewPriceDataService(btcClient)
+	btcData, err := btcDataService.GetTickerDataBySymbol(bitcoinaverage.SymbolSetGlobal, v)
 	if err != nil {
 		Logger.Debugw("No currency data to save or bad request to bitcoinaverage")
+		return false
 	} else {
-		server.SetRValue("BTCUSD", strconv.FormatFloat(priceData.Ask, 'f', -1, 64))
+		server.SetRValue(v, btcData.Ask)
+		return true
 	}
-	//fmt.Println(server.GetRValue("BTCUSD"))
 }
 
-func (server *CurrencyServer) GetRouter() *mux.Router {
-	return server.Router
-}
-
+//redis
 func (server *CurrencyServer) RedisConnection() {
 	server.RClient = redis.NewClient(&redis.Options{
 		Addr:     "localhost:6379",
@@ -120,20 +187,27 @@ func (server *CurrencyServer) RedisConnection() {
 		Logger.Debugw("No connection to Redis")
 		return
 	}
+
+	server.RClient.FlushAll()
+	for i, v := range server.Currency {
+		server.SetRValue(i, v)
+	}
 	Logger.Debugw("Redis connection - ok")
 }
 
-func (server *CurrencyServer) SetRValue(key string, value string) {
+func (server *CurrencyServer) SetRValue(key string, value float64) {
 	err := server.RClient.Set(key, value, 0).Err()
 	if err != nil {
-		panic(err)
+		Logger.Debugw("Can't set value to Redis")
+		return
 	}
 }
 
-func (server *CurrencyServer) GetRValue(key string) string {
-	val, err := server.RClient.Get(key).Result()
+func (server *CurrencyServer) GetRValue(key string) float64 {
+	val, err := server.RClient.Get(key).Float64()
 	if err != nil {
-		//panic(err)
+		Logger.Debugw("Can't get value from Redis")
+		return 0.00
 	}
 	return val
 }

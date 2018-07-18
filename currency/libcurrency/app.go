@@ -25,7 +25,7 @@ type Application struct {
 	serverAPIEndpoint string
 	pubKey            string
 	secretKey         string
-	timerValue        int
+	tickerValue       int
 
 	rootCmd *cobra.Command
 }
@@ -51,7 +51,7 @@ func (app *Application) InitCommands() {
 	app.rootCmd.PersistentFlags().StringVarP(&app.pubKey, "pub_k_bitcoinaverage", "p", "", "public key to bitcoinaverage")
 	app.rootCmd.PersistentFlags().StringVarP(&app.secretKey, "secret_k_bitcoinaverage", "s", "", "secret key to bitcoinaverage")
 	app.rootCmd.PersistentFlags().StringVarP(&app.serverAPIEndpoint, "api", "a", "", "API URL endpoint")
-	app.rootCmd.PersistentFlags().IntVarP(&app.timerValue, "timer_value", "t", 5, "time to wait")
+	app.rootCmd.PersistentFlags().IntVarP(&app.tickerValue, "ticker_value", "t", 5, "time to wait")
 }
 
 func (app *Application) InitConfig(configName, envPrefix string) {
@@ -65,8 +65,8 @@ func (app *Application) InitConfig(configName, envPrefix string) {
 	cfg.BindPFlag("server.addr", app.rootCmd.PersistentFlags().Lookup("service_address"))
 	cfg.SetDefault("server.apiPrefix", "")
 	cfg.BindPFlag("server.apiPrefix", app.rootCmd.PersistentFlags().Lookup("api"))
-	cfg.SetDefault("timer.value", 5)
-	cfg.BindPFlag("timer.value", app.rootCmd.PersistentFlags().Lookup("timer_value"))
+	cfg.SetDefault("ticker.value", 5)
+	cfg.BindPFlag("ticker.value", app.rootCmd.PersistentFlags().Lookup("ticker_value"))
 	cfg.SetDefault("pub.key", "")
 	cfg.BindPFlag("pub.key", app.rootCmd.PersistentFlags().Lookup("pub_k_bitcoinaverage"))
 	cfg.SetDefault("secret.key", "")
@@ -117,7 +117,7 @@ func (app *Application) Init() {
 	app.Server = NewServer(CurrencyServerConfig{
 		address:   app.cfg.GetString("server.addr"),
 		apiPrefix: app.cfg.GetString("server.apiPrefix"),
-		timer:     app.cfg.GetInt64("timer.value"),
+		ticker:    app.cfg.GetInt64("ticker.value"),
 	})
 	//app.Server.Timer = time.NewTimer(time.Second * time.Duration(app.timerValue))
 }
