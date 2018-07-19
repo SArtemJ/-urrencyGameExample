@@ -1,0 +1,31 @@
+package: github.com/SArtemJ/CurrencyGameExample/steam
+import:
+- package: github.com/gorilla/mux
+- package: github.com/spf13/cast
+- package: github.com/spf13/cobra
+- package: github.com/spf13/jwalterweatherman
+- package: github.com/spf13/viper
+- package: github.com/spf13/pflag
+- package: go.uber.org/zap
+- package: gopkg.in/mgo.v2
+  subpackages:
+  - bson
+- package: go.uber.org/atomic
+  subpackages:
+  - zapcore
+- package: github.com/fsnotify/fsnotify
+- package: github.com/hashicorp/hcl
+- package: github.com/magiconair/properties
+- package: github.com/mitchellh/mapstructure
+- package: github.com/pelletier/go-toml
+- package: github.com/spf13/afero
+- package: go.uber.org/multierr
+- package: golang.org/x/sys/unix
+- package: golang.org/x/text/transform
+- package: golang.org/x/text/unicode/norm
+- package: gopkg.in/yaml.v2
+testImport:
+- package: github.com/stretchr/testify
+  subpackages:
+  - assert
+  - require
