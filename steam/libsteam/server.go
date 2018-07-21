@@ -2,8 +2,10 @@ package libsteam
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 
 	"github.com/gorilla/mux"
 	"gopkg.in/mgo.v2/bson"
@@ -24,8 +26,9 @@ type MgoGameServerConfig struct {
 
 const (
 	URLGetGames    = "http://api.steampowered.com/ISteamApps/GetAppList/v2"
-	URLGetCostGame = "http://store.steampowered.com/api/appdetails?appids="
-	Language       = "l=en"
+	URLGetCostGame = "https://store.steampowered.com/api/appdetails/"
+
+	//https://store.steampowered.com/api/appdetails/?appids=237110&cc=us&filters=price_overview&type=game
 	//http://store.steampowered.com/api/appdetails?appids=57690&cc=us
 )
 
@@ -55,10 +58,9 @@ func (server *MgoGameServer) SetupRouter() {
 	server.Router = server.Router.PathPrefix(server.APIPrefix).Subrouter()
 	Logger.Debugf(`API endpoint "%s"`, server.APIPrefix)
 
-	server.Router.HandleFunc("/gameprice", server.GamePrice).Methods("POST")
-	// server.Router.HandleFunc("/currency/{type}", server.GetOneCurrency).Methods("GET")
-	// server.Router.HandleFunc("/currencyall", server.GetAllCurrency).Methods("GET")
-	// server.Router.HandleFunc("/updateall", server.UpdateAllCurrency).Methods("GET")
+	//server.Router.HandleFunc("/game/", server.GetCostOneGame).Methods("GET")
+	//server.Router.HandleFunc("/updall/", server.UpdateAllGames).Methods("GET")
+	//server.Router.HandleFunc("/getdef/", server.GetDefaultGameCostFromSteam).Methods("GET")
 }
 
 func (server *MgoGameServer) Run() {
@@ -77,13 +79,6 @@ func (server *MgoGameServer) Run() {
 	// 	return nil
 	// })
 	http.ListenAndServe(server.Address, server.Router)
-}
-
-type PriceOverview struct {
-	Currency        string `json:"currency"`
-	Initial         int    `json:"initial"`
-	Final           int    `json:"final"`
-	DiscountPercent int    `json:"discount_percent"`
 }
 
 func (server *MgoGameServer) GetAllGamesSteam() bool {
@@ -115,7 +110,11 @@ func (server *MgoGameServer) GetAllGamesSteam() bool {
 
 	for _, v := range data.Applist.Apps {
 		v.ID = bson.NewObjectId()
-		v.Cost = 0.00
+		v.USD = 0
+		v.EUR = 0
+		v.GBP = 0
+		v.RUB = 0
+		v.BTC = 0
 		if err := server.Storage.Db.C(server.Storage.Collection).Insert(v); err != nil {
 			Logger.Debugw("Can't save data info about games in MongoDB", " appid - ", err)
 			continue
@@ -124,35 +123,69 @@ func (server *MgoGameServer) GetAllGamesSteam() bool {
 	return true
 }
 
-func (server *MgoGameServer) GamePrice(w http.ResponseWriter, r *http.Request) {
+func (server *MgoGameServer) GetDefaultGameCostFromSteam(AppID string) bool {
+	done := false
 
-	//request := fmt.Sprintf(URLGetCostGame+"&%s"+"cc=%s&"+Language, "57690", "us")
-	request := "https://store.steampowered.com/api/appdetails/?appids=237110&cc=us&filters=price_overview&type=game"
-	req, err := http.NewRequest(http.MethodGet, request, nil)
+	if game, ok := server.Storage.CheckAndReturnGameInDB(AppID); ok == true {
+		game.M.RLock()
+
+		request := fmt.Sprintf(URLGetCostGame+"?appids=%s&cc=us&filters=price_overview&type=game", AppID)
+
+		if b, ok := server.DoRequest("GET", request); ok == true {
+			data := make(map[int]SteamAppPrice)
+			err := json.Unmarshal(b, &data)
+			if err != nil {
+				Logger.Debugw("Can't parse response body to struct Go - game cost", err)
+				return done
+			}
+			appIDInt, err := strconv.Atoi(AppID)
+			if err != nil {
+				Logger.Debugw("Bad id to request try again", err)
+				return done
+			}
+			if _, ok := data[appIDInt]; ok {
+				game.App.USD = data[appIDInt].Data.Price.Final
+			} else {
+				Logger.Debugw("Not exist id in map from JSON game cost", err)
+				return done
+			}
+		}
+
+		if ok := server.Storage.UpdateFiledByID(game.App.ID, "USD", game.App.USD); ok == true {
+			Logger.Debugw("Defaulf cost by USD updated to game - " + game.App.Name)
+			done = true
+			return done
+		} else {
+			Logger.Debugw("Can't update cost by USD to game" + game.App.Name)
+			return done
+		}
+
+		game.M.RUnlock()
+	}
+	return done
+}
+
+func (server *MgoGameServer) DoRequest(method, url string) ([]byte, bool) {
+	req, err := http.NewRequest(method, url, nil)
 	if err != nil {
-		Logger.Debugw("Error create request to get data about Games")
-		//return false
+		Logger.Debugw("Error create request with method", " - ", method)
+		Logger.Debugw("Error create request with url", " - ", url)
+		return nil, false
 	}
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		Logger.Debugw("Error response to get data about games")
-		//return false
+		Logger.Debugw("Error response method", " - ", method)
+		Logger.Debugw("Error response request", " - ", url)
+		return nil, false
 	}
 
 	defer res.Body.Close()
 	b, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		Logger.Debugw("Error read esponse body with info about games")
-		//return false
+		Logger.Debugw("Error read esponse method", " - ", method)
+		Logger.Debugw("Error read esponse url", " - ", url)
+		return nil, false
 	}
-
-	result := make(map[int]SteamAppPrice)
-	json.Unmarshal(b, &result)
-
-	json.NewEncoder(w).Encode(result)
-	w.WriteHeader(http.StatusOK)
-	//log.Printf("%v\n", result)
-
-	//return true
+	return b, true
 }

@@ -47,7 +47,7 @@ func (app *Application) InitCommands() {
 		},
 	}
 
-	app.rootCmd.PersistentFlags().StringVarP(&app.listenAddr, "service_address", "l", "localhost:8099", "service address")
+	app.rootCmd.PersistentFlags().StringVarP(&app.listenAddr, "service_address", "l", "localhost:8888", "service address")
 	app.rootCmd.PersistentFlags().StringVarP(&app.pubKey, "pub_k_bitcoinaverage", "p", "", "public key to bitcoinaverage")
 	app.rootCmd.PersistentFlags().StringVarP(&app.secretKey, "secret_k_bitcoinaverage", "s", "", "secret key to bitcoinaverage")
 	app.rootCmd.PersistentFlags().StringVarP(&app.serverAPIEndpoint, "api", "a", "", "API URL endpoint")
@@ -61,7 +61,7 @@ func (app *Application) InitConfig(configName, envPrefix string) {
 	cfg.AutomaticEnv()
 	cfg.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
-	cfg.SetDefault("server.addr", "localhost:8099")
+	cfg.SetDefault("server.addr", "localhost:8888")
 	cfg.BindPFlag("server.addr", app.rootCmd.PersistentFlags().Lookup("service_address"))
 	cfg.SetDefault("server.apiPrefix", "")
 	cfg.BindPFlag("server.apiPrefix", app.rootCmd.PersistentFlags().Lookup("api"))
