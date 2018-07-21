@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -22,6 +23,10 @@ type MgoGameServerConfig struct {
 	address   string
 	apiPrefix string
 	Storage   *MongoStorage
+}
+
+type ReturnCurrency struct {
+	Value float64 `json:"value"`
 }
 
 const (
@@ -58,7 +63,7 @@ func (server *MgoGameServer) SetupRouter() {
 	server.Router = server.Router.PathPrefix(server.APIPrefix).Subrouter()
 	Logger.Debugf(`API endpoint "%s"`, server.APIPrefix)
 
-	//server.Router.HandleFunc("/game/", server.GetCostOneGame).Methods("GET")
+	server.Router.HandleFunc("/game", server.GetGameCost).Methods("POST")
 	//server.Router.HandleFunc("/updall/", server.UpdateAllGames).Methods("GET")
 	//server.Router.HandleFunc("/getdef/", server.GetDefaultGameCostFromSteam).Methods("GET")
 }
@@ -79,6 +84,36 @@ func (server *MgoGameServer) Run() {
 	// 	return nil
 	// })
 	http.ListenAndServe(server.Address, server.Router)
+}
+
+func (server *MgoGameServer) GetGameCost(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+
+	if r.Method == "GET" {
+
+	}
+
+	gameID := r.Form.Get("appid")
+	currency := r.Form.Get("currency")
+	Logger.Debugw("POST request get cost game", "game id", gameID, "currency", currency)
+
+	if server.GetDefaultGameCostFromSteam(gameID) == true {
+		if app, ok := server.Storage.CheckAndReturnGameInDB(gameID); ok == true {
+			basicCost := app.App.USD * 100.00 //cent
+
+			switch currency {
+			case "EUR":
+				if v, ok := server.RequestToCurrencyAPI("BTCUSD"); ok == true {
+					sAppInBTC := basicCost / v //BTC in cent
+					if e, ok := server.RequestToCurrencyAPI("BTCEUR"); ok == true {
+						//Cost in EUR by course BTCEUR
+						result := (sAppInBTC * e)
+						log.Println(result)
+					}
+				}
+			}
+		}
+	}
 }
 
 func (server *MgoGameServer) GetAllGamesSteam() bool {
@@ -128,7 +163,7 @@ func (server *MgoGameServer) GetDefaultGameCostFromSteam(AppID string) bool {
 
 	if game, ok := server.Storage.CheckAndReturnGameInDB(AppID); ok == true {
 		game.M.RLock()
-
+		defer game.M.RUnlock()
 		request := fmt.Sprintf(URLGetCostGame+"?appids=%s&cc=us&filters=price_overview&type=game", AppID)
 
 		if b, ok := server.DoRequest("GET", request); ok == true {
@@ -144,7 +179,7 @@ func (server *MgoGameServer) GetDefaultGameCostFromSteam(AppID string) bool {
 				return done
 			}
 			if _, ok := data[appIDInt]; ok {
-				game.App.USD = data[appIDInt].Data.Price.Final
+				game.App.USD = float64(data[appIDInt].Data.Price.Final)
 			} else {
 				Logger.Debugw("Not exist id in map from JSON game cost", err)
 				return done
@@ -159,8 +194,6 @@ func (server *MgoGameServer) GetDefaultGameCostFromSteam(AppID string) bool {
 			Logger.Debugw("Can't update cost by USD to game" + game.App.Name)
 			return done
 		}
-
-		game.M.RUnlock()
 	}
 	return done
 }
@@ -188,4 +221,24 @@ func (server *MgoGameServer) DoRequest(method, url string) ([]byte, bool) {
 		return nil, false
 	}
 	return b, true
+}
+
+func (server *MgoGameServer) RequestToCurrencyAPI(typeCurrency string) (float64, bool) {
+	url := fmt.Sprintf("http://localhost:8888/api/currency/%s", typeCurrency)
+
+	var data ReturnCurrency
+	var ok = false
+
+	if b, ok := server.DoRequest("GET", url); ok == true {
+		err := json.Unmarshal(b, &data)
+		if err != nil {
+			Logger.Debugw("Can't parse response body to struct Go - currency game")
+			return 0.00, ok
+		}
+	}
+
+	//cent's
+	oneBTC := data.Value * 100.00
+	ok = true
+	return oneBTC, ok
 }

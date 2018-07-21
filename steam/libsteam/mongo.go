@@ -19,11 +19,11 @@ type AppsStruct struct {
 	ID    bson.ObjectId `bson:"_id" json:"id"`
 	Appid int           `bson:"appid" json:"appid"`
 	Name  string        `bson:"name" json:"name"`
-	USD   int           `bson:"USD" json:"USD"`
-	EUR   int           `bson:"EUR" json:"EUR"`
-	GBP   int           `bson:"GBP" json:"GBP"`
-	RUB   int           `bson:"RUB" json:"RUB"`
-	BTC   int           `bson:"BTC" json:"BTC"`
+	USD   float64       `bson:"USD" json:"USD"`
+	EUR   float64       `bson:"EUR" json:"EUR"`
+	GBP   float64       `bson:"GBP" json:"GBP"`
+	RUB   float64       `bson:"RUB" json:"RUB"`
+	BTC   float64       `bson:"BTC" json:"BTC"`
 }
 
 type ApplistStruct struct {
@@ -52,13 +52,6 @@ type AppsWithMutex struct {
 	App AppsStruct
 	M   sync.RWMutex
 }
-
-// type PriceOverview struct {
-// 	Currency        string `json:"currency"`
-// 	Initial         int    `json:"initial"`
-// 	Final           int    `json:"final"`
-// 	DiscountPercent int    `json:"discount_percent"`
-// }
 
 func NewMongoStorage(uri string, databaseName string) *MongoStorage {
 	session, err := mgo.Dial(uri)

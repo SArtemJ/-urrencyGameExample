@@ -33,6 +33,10 @@ type CurrencyServerConfig struct {
 	secretKey string
 }
 
+type ReturnCurrency struct {
+	Value float64 `json:"value"`
+}
+
 func NewServer(cfg CurrencyServerConfig) *CurrencyServer {
 	if cfg.address == "" {
 		cfg.address = "/"
@@ -116,10 +120,11 @@ func (server *CurrencyServer) UpdateOneCurrency(w http.ResponseWriter, r *http.R
 }
 
 func (server *CurrencyServer) GetOneCurrency(w http.ResponseWriter, r *http.Request) {
-	var resultC float64
+	var resultC ReturnCurrency
 	typeC := mux.Vars(r)["type"]
 	if _, ok := server.Currency[typeC]; ok {
-		resultC = server.GetRValue(typeC)
+		resultC.Value = server.GetRValue(typeC)
+		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 		json.NewEncoder(w).Encode(resultC)
 		w.WriteHeader(http.StatusOK)
 	} else {
