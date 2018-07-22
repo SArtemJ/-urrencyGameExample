@@ -165,7 +165,8 @@ func (server *CurrencyServer) CurrencyUpdate(v string) bool {
 //redis
 func (server *CurrencyServer) RedisConnection() {
 	server.RClient = redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
+		Addr: "localhost:6379",
+		//Addr:     "redis:6379", to docker
 		Password: "",
 		DB:       0,
 	})
