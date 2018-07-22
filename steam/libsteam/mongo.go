@@ -82,10 +82,19 @@ func (s *MongoStorage) Close() {
 	s.Db = nil
 }
 
+/*Reset
+очищаем БД
+*/
 func (s MongoStorage) Reset() {
 	s.Db.C(s.Collection).RemoveAll(nil)
 }
 
+/*
+CheckAndReturnGameInDB
+проверяет наличие игры с указанным id в базе Mongo
+если игра есть возвращает ее для дальнейшей работы
+appid - id игры соответсвует appid из базы Steam
+*/
 func (s MongoStorage) CheckAndReturnGameInDB(appid string) (*AppsWithMutex, bool) {
 	var app AppsWithMutex
 	appID, err := strconv.Atoi(appid)
@@ -101,6 +110,12 @@ func (s MongoStorage) CheckAndReturnGameInDB(appid string) (*AppsWithMutex, bool
 	return &app, true
 }
 
+/*UpdateFiledByID
+обновляет значение поля в MongoDB по соответсвующему ID игры
+appMongoID - id записи в базе Mongo
+field - поле которое обновляем
+value - значение которым обновляем
+*/
 func (s MongoStorage) UpdateFiledByID(appMongoID bson.ObjectId, field string, value interface{}) bool {
 	err := s.Db.C(s.Collection).Update(bson.M{"_id": appMongoID}, bson.M{"$set": bson.M{field: value}})
 	if err != nil {

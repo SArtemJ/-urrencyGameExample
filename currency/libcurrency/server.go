@@ -48,10 +48,10 @@ func NewServer(cfg CurrencyServerConfig) *CurrencyServer {
 		cfg.ticker = 5
 	}
 	if cfg.publicKey == "" {
-		cfg.publicKey = ""
+		cfg.publicKey = "ODkzOGI3NTk3ODk1NGVmMDgzMDRiMWZkYTJiZDQzOTg"
 	}
 	if cfg.secretKey == "" {
-		cfg.secretKey = ""
+		cfg.secretKey = "NTNlNDc2M2Y2ODJhNDViYmFlMjM5NGJmNDk2MTAxZDQwZGUyZWYxZTFmOTA0MTRjYWJkMGRmNTdiNTAzN2I4MQ"
 	}
 
 	server := &CurrencyServer{
@@ -79,7 +79,7 @@ func (server *CurrencyServer) SetupRouter() {
 	server.Router.HandleFunc("/update/{type}", server.UpdateOneCurrency).Methods("PATCH")
 	server.Router.HandleFunc("/currency/{type}", server.GetOneCurrency).Methods("GET")
 	server.Router.HandleFunc("/currencyall", server.GetAllCurrency).Methods("GET")
-	server.Router.HandleFunc("/updateall", server.UpdateAllCurrency).Methods("GET")
+	server.Router.HandleFunc("/updateall", server.UpdateAllCurrency).Methods("PATCH")
 }
 
 func (server *CurrencyServer) Run() {
@@ -91,15 +91,6 @@ func (server *CurrencyServer) Run() {
 		}
 	}()
 	Logger.Debugf(`Stream server started on "%s"`, server.Address)
-
-	// server.Router.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
-	// 	t, err := route.GetPathTemplate()
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	fmt.Println(t)
-	// 	return nil
-	// })
 	http.ListenAndServe(server.Address, server.Router)
 }
 
@@ -137,17 +128,9 @@ func (server *CurrencyServer) GetOneCurrency(w http.ResponseWriter, r *http.Requ
 
 func (server *CurrencyServer) UpdateAllCurrency(w http.ResponseWriter, r *http.Request) {
 	server.DoUpdateImmediately()
-	// btcClient := bitcoinaverage.NewClient(server.PublicKey, server.SecretKey)
-	// btcDataService := bitcoinaverage.NewbtcDataService(btcClient)
-
-	// for _, v := range server.Currency {
-	// 	btcData, err := btcDataService.GetTickerDataBySymbol(bitcoinaverage.SymbolSetGlobal, v)
-	// 	if err != nil {
-	// 		Logger.Debugw("No currency data to save or bad request to bitcoinaverage")
-	// 	} else {
-	// 		server.SetRValue(v, strconv.FormatFloat(btcData.Ask, 'f', -1, 64))
-	// 	}
-	// }
+	w.WriteHeader(http.StatusOK)
+	io.WriteString(w, "All currency was updated")
+	Logger.Debugw("All currency was updated")
 }
 
 func (server *CurrencyServer) GetAllCurrency(w http.ResponseWriter, r *http.Request) {

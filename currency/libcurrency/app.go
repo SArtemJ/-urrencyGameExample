@@ -119,7 +119,6 @@ func (app *Application) Init() {
 		apiPrefix: app.cfg.GetString("server.apiPrefix"),
 		ticker:    app.cfg.GetInt64("ticker.value"),
 	})
-	//app.Server.Timer = time.NewTimer(time.Second * time.Duration(app.timerValue))
 }
 
 func (app *Application) Run() {
