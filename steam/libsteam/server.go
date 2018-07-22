@@ -3,8 +3,9 @@ package libsteam
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
-	"log"
+	"math"
 	"net/http"
 	"strconv"
 
@@ -88,11 +89,6 @@ func (server *MgoGameServer) Run() {
 
 func (server *MgoGameServer) GetGameCost(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
-
-	if r.Method == "GET" {
-
-	}
-
 	gameID := r.Form.Get("appid")
 	currency := r.Form.Get("currency")
 	Logger.Debugw("POST request get cost game", "game id", gameID, "currency", currency)
@@ -100,20 +96,59 @@ func (server *MgoGameServer) GetGameCost(w http.ResponseWriter, r *http.Request)
 	if server.GetDefaultGameCostFromSteam(gameID) == true {
 		if app, ok := server.Storage.CheckAndReturnGameInDB(gameID); ok == true {
 			basicCost := app.App.USD * 100.00 //cent
+			costInBTC := server.GetDefaultCostApp_InBTC(basicCost)
 
+			app.M.Lock()
+			defer app.M.Unlock()
 			switch currency {
 			case "EUR":
-				if v, ok := server.RequestToCurrencyAPI("BTCUSD"); ok == true {
-					sAppInBTC := basicCost / v //BTC in cent
-					if e, ok := server.RequestToCurrencyAPI("BTCEUR"); ok == true {
-						//Cost in EUR by course BTCEUR
-						result := (sAppInBTC * e)
-						log.Println(result)
-					}
-				}
+				f := server.ConvertCost(basicCost, "BTCEUR") / 100.00
+				app.App.EUR = FloatFixed(f)
+				server.Storage.UpdateFiledByID(app.App.ID, "EUR", app.App.EUR)
+			case "GBP":
+				f := server.ConvertCost(basicCost, "BTCGBP") / 100.00
+				app.App.GBP = FloatFixed(f)
+				server.Storage.UpdateFiledByID(app.App.ID, "GBP", app.App.GBP)
+			case "RUB":
+				f := server.ConvertCost(basicCost, "BTCRUB") / 100.00
+				app.App.RUB = FloatFixed(f)
+				server.Storage.UpdateFiledByID(app.App.ID, "RUB", app.App.RUB)
+			case "BTC":
+				app.App.BTC = costInBTC
+				server.Storage.UpdateFiledByID(app.App.ID, "BTC", app.App.BTC)
+			case "USD":
+				app.App.USD = basicCost
+				server.Storage.UpdateFiledByID(app.App.ID, "USD", app.App.USD)
 			}
+			w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+			json.NewEncoder(w).Encode(app.App)
+			w.WriteHeader(http.StatusOK)
+		}
+	} else {
+		w.WriteHeader(http.StatusNoContent)
+		io.WriteString(w, "No game info please try again")
+		Logger.Debugw("Not exist game in Mongo DB")
+	}
+}
+
+func (server *MgoGameServer) GetDefaultCostApp_InBTC(basicCostInUSD float64) float64 {
+	costAppInBTC := 0.00
+	if v, ok := server.RequestToCurrencyAPI("BTCUSD"); ok == true {
+		costAppInBTC = basicCostInUSD / v //game cost in BTC
+	}
+	return costAppInBTC
+}
+
+func (server *MgoGameServer) ConvertCost(basicCostInUSD float64, typeCost string) float64 {
+	result := 0.00
+	if v, ok := server.RequestToCurrencyAPI("BTCUSD"); ok == true {
+		sAppInBTC := basicCostInUSD / v //BTC in cent
+		if newCost, ok := server.RequestToCurrencyAPI(typeCost); ok == true {
+			//Cost in new type
+			result = (sAppInBTC * newCost)
 		}
 	}
+	return result
 }
 
 func (server *MgoGameServer) GetAllGamesSteam() bool {
@@ -162,8 +197,8 @@ func (server *MgoGameServer) GetDefaultGameCostFromSteam(AppID string) bool {
 	done := false
 
 	if game, ok := server.Storage.CheckAndReturnGameInDB(AppID); ok == true {
-		game.M.RLock()
-		defer game.M.RUnlock()
+		game.M.Lock()
+		defer game.M.Unlock()
 		request := fmt.Sprintf(URLGetCostGame+"?appids=%s&cc=us&filters=price_overview&type=game", AppID)
 
 		if b, ok := server.DoRequest("GET", request); ok == true {
@@ -241,4 +276,9 @@ func (server *MgoGameServer) RequestToCurrencyAPI(typeCurrency string) (float64,
 	oneBTC := data.Value * 100.00
 	ok = true
 	return oneBTC, ok
+}
+
+func FloatFixed(num float64) float64 {
+	output := math.Pow(10, float64(2))
+	return float64(math.Round(num*output)) / output
 }

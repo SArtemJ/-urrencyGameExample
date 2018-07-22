@@ -50,7 +50,7 @@ type AppPrice struct {
 
 type AppsWithMutex struct {
 	App AppsStruct
-	M   sync.RWMutex
+	M   sync.Mutex
 }
 
 func NewMongoStorage(uri string, databaseName string) *MongoStorage {
@@ -86,19 +86,19 @@ func (s MongoStorage) Reset() {
 	s.Db.C(s.Collection).RemoveAll(nil)
 }
 
-func (s MongoStorage) CheckAndReturnGameInDB(appid string) (AppsWithMutex, bool) {
+func (s MongoStorage) CheckAndReturnGameInDB(appid string) (*AppsWithMutex, bool) {
 	var app AppsWithMutex
 	appID, err := strconv.Atoi(appid)
 	if err != nil {
 		Logger.Debugw("Bad id to request try again", err)
-		return app, false
+		return &app, false
 	}
 
 	if err := s.Db.C(s.Collection).Find(bson.M{"appid": appID}).One(&app.App); err != nil {
 		Logger.Debugw("Can't find app in databse with", " id - ", appid)
-		return app, false
+		return &app, false
 	}
-	return app, true
+	return &app, true
 }
 
 func (s MongoStorage) UpdateFiledByID(appMongoID bson.ObjectId, field string, value interface{}) bool {
