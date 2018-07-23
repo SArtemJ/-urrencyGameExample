@@ -61,7 +61,7 @@ func (app *Application) InitConfig(configName, envPrefix string) {
 	cfg.AutomaticEnv()
 	cfg.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
-	cfg.SetDefault("server.addr", "localhost:8888")
+	cfg.SetDefault("server.addr", "0.0.0.0:8888")
 	cfg.BindPFlag("server.addr", app.rootCmd.PersistentFlags().Lookup("service_address"))
 	cfg.SetDefault("server.apiPrefix", "")
 	cfg.BindPFlag("server.apiPrefix", app.rootCmd.PersistentFlags().Lookup("api"))

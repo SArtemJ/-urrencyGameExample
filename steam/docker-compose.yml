@@ -17,3 +17,8 @@ services:
   db:
     image: mongo:3.0
     command: mongod --smallfiles --quiet --logpath=/dev/null
+
+networks:
+  default:
+    external:
+      name: my-bridge-network

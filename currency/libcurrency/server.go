@@ -39,7 +39,7 @@ type ReturnCurrency struct {
 
 func NewServer(cfg CurrencyServerConfig) *CurrencyServer {
 	if cfg.address == "" {
-		cfg.address = "/"
+		cfg.address = "0.0.0.0:8888"
 	}
 	if cfg.apiPrefix == "" {
 		cfg.apiPrefix = "/api/"

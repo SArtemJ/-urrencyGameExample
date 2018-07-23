@@ -40,7 +40,7 @@ const (
 
 func NewServer(cfg MgoGameServerConfig) *MgoGameServer {
 	if cfg.address == "" {
-		cfg.address = "localhost:8099"
+		cfg.address = "0.0.0.0:8099"
 	}
 	if cfg.apiPrefix == "" {
 		cfg.apiPrefix = "/api/"
@@ -301,7 +301,7 @@ typeCurrency - тип валюты (USD, EUR, GBP, RUB)
 возвращает стоимость 1 BTC в выбранной валюте (USD, EUR, GBP, RUB) (в центах)
 */
 func (server *MgoGameServer) RequestToCurrencyAPI(typeCurrency string) (float64, bool) {
-	url := fmt.Sprintf("http://localhost:8888/api/currency/%s", typeCurrency)
+	url := fmt.Sprintf("http://currency_app_1:8888/api/currency/%s", typeCurrency)
 
 	var data ReturnCurrency
 	var ok = false

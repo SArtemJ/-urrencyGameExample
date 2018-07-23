@@ -38,7 +38,14 @@
      - http://localhost:8099//del/id (где id - уникальный номер игры в steam)
 
 
-# PS
-Docker контейнеры поднимаются корректно, но сообщение между ними происходит очень медленно, в связи с чем падает выполнение запросов
-currency дольше отсылает запросы на bitcoinaverage прежде чем обновит валюты будет несколько раз логировать ошибки
-почему происходят такие задержки пока не понял, возможно нужно пересмотреть соединения между контейнерами и ОС
+# Сборка Docker
+docker network create -d bridge my-bridge-network
+
+cd /currency
+docker-compose up
+
+cd /steam
+docker-compose up
+
+currency доступен по localhost:8888
+steam доступен по localhost:8099

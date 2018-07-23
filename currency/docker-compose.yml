@@ -16,3 +16,8 @@ services:
 
   redis:
     image: redis:alpine
+
+networks:
+  default:
+    external:
+      name: my-bridge-network
