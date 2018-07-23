@@ -45,7 +45,7 @@ func NewServer(cfg CurrencyServerConfig) *CurrencyServer {
 		cfg.apiPrefix = "/api/"
 	}
 	if cfg.ticker == 0 {
-		cfg.ticker = 5
+		cfg.ticker = 1
 	}
 	if cfg.publicKey == "" {
 		cfg.publicKey = "ODkzOGI3NTk3ODk1NGVmMDgzMDRiMWZkYTJiZDQzOTg"
@@ -165,8 +165,8 @@ func (server *CurrencyServer) CurrencyUpdate(v string) bool {
 //redis
 func (server *CurrencyServer) RedisConnection() {
 	server.RClient = redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
-		//Addr:     "redis:6379", to docker
+		//Addr: "localhost:6379", //для локальной машины
+		Addr:     "redis:6379", //для  docker
 		Password: "",
 		DB:       0,
 	})

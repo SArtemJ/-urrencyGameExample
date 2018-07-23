@@ -65,7 +65,9 @@ func (app *Application) InitConfig(configName, envPrefix string) {
 	cfg.BindPFlag("server.apiPrefix", app.rootCmd.PersistentFlags().Lookup("api"))
 	cfg.SetDefault("storage.name", "gamedb")
 	cfg.BindPFlag("storage.name", app.rootCmd.PersistentFlags().Lookup("storage_name"))
-	cfg.SetDefault("storage.addr", "localhost")
+	//для docker steam_db_1
+	//для локального localhost
+	cfg.SetDefault("storage.addr", "steam_db_1")
 	cfg.BindPFlag("storage.addr", app.rootCmd.PersistentFlags().Lookup("storage_addr"))
 
 	cfg.SetConfigName(configName)

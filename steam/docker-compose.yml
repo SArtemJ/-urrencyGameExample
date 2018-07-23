@@ -1,0 +1,19 @@
+version: "3"
+
+services:
+  app:
+    build: .
+    working_dir: /go/src
+    ports:
+      - "8099:8099"
+    volumes:
+      - .:/go/src
+    command: go run steam.go
+    links:
+      - db
+    environment:
+      - DB_NAME=Games
+
+  db:
+    image: mongo:3.0
+    command: mongod --smallfiles --quiet --logpath=/dev/null

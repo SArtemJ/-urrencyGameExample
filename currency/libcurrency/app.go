@@ -65,7 +65,7 @@ func (app *Application) InitConfig(configName, envPrefix string) {
 	cfg.BindPFlag("server.addr", app.rootCmd.PersistentFlags().Lookup("service_address"))
 	cfg.SetDefault("server.apiPrefix", "")
 	cfg.BindPFlag("server.apiPrefix", app.rootCmd.PersistentFlags().Lookup("api"))
-	cfg.SetDefault("ticker.value", 5)
+	cfg.SetDefault("ticker.value", 1)
 	cfg.BindPFlag("ticker.value", app.rootCmd.PersistentFlags().Lookup("ticker_value"))
 	cfg.SetDefault("pub.key", "")
 	cfg.BindPFlag("pub.key", app.rootCmd.PersistentFlags().Lookup("pub_k_bitcoinaverage"))
